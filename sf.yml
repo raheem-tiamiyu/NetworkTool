@@ -1,0 +1,16 @@
+name: sf
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - pip
+  - pytest
+  - pyodbc
+  - minio
+  - ipython
+  - jupyter
+  - mypy
+  - miniforge_console_shortcut
+  - pip:
+    - pandas
+    - openpyxl
