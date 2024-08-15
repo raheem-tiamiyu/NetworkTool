@@ -106,7 +106,7 @@ function handleKeepFile(filename, search_key) {
 }
 
 eel.expose(updateCount);
-function updateCount(value) {
+function updateCount(i) {
   const countDiv = document.getElementById("file-count");
-  countDiv.innerHTML = `${value} File(s) found`;
+  countDiv.innerHTML = `${i} File(s) found`;
 }

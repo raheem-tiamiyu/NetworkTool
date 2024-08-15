@@ -14,23 +14,11 @@ found_files_lock = Lock()
 misses_lock = Lock()
 found_files = defaultdict(list)
 files = []
-# found_files['til'] = ['red','yell', 'greer']
-# found_files['til1'] = ['red1','yell1', 'greer1']
-# found_files['til2'] = ['red2','yell2', 'greer2']
-# files=['red','yell', 'greer','red1','yell1', 'greer1', 'red2','yell2', 'greer2']
 misses = defaultdict(list)
-all_search_key = []
+search_keys = []
 
 currentPage = 0
 FILES_PER_PAGE = 20
-
-# file_path = 'MGM_2007.xlsx'
-# folders = ["//encana.com/ecnshare/CGY/data_cdn/LockdownINTL", "//encana.com/ecnshare/CGY/data_cdn/LockdownCDN"]
-# target_folder = os.walk(os.path.normpath("//encana.com/ecnshare/CGY/data_cdn/LockdownINTL"))
-# id_list = columns['Seismic ID'].values.tolist()
-# name_list = columns['Seismic Name'].values.tolist()
-
-# columns_values = []
 
 
 def get_exl_column_values(target_columns, columns):
@@ -72,26 +60,23 @@ def thread_for_each_column(columns_values, target_folder, queue):
                     if input_string in lower_filename:
                         with found_files_lock:
                             target_file = os.path.join(dirpath, filename)
-                            add_to_found_files(target_file, input_string)
-                            updateEelCount()
-                            print(input_string, filename, target_file)
-
-                        # queue.put(
-                        #     {
-                        #         "found_file": {
-                        #             "target_file": target_file,
-                        #             "input_string": input_string,
-                        #         }
-                        #     }
-                        # )
-                    # queue.put({"update_count"})
-                    # eel.updateCount(len(files))
-                    break
+                            # print(input_string, filename, target_file)
+                        queue.put(
+                            {
+                                "found_file": {
+                                    "target_file": target_file,
+                                    "input_string": input_string,
+                                }
+                            }
+                        )
+                        break
 
 
 def search_folders(folder, columns_values, target_columns, thread_name, queue):
     target_folder = os.walk(os.path.normpath(folder))
-    print(str(thread_name) + " searching: ", target_folder)
+    # print(str(thread_name) + " searching: ", target_folder)
+    # print(os.getpid(), " started")
+
     column_threads = []
 
     for column_index in range(len(columns_values)):
@@ -100,13 +85,15 @@ def search_folders(folder, columns_values, target_columns, thread_name, queue):
         )
         print("Searching ", target_columns[column_index])
         thread = Thread(
-            target=thread_for_each_column, args=(values_set, target_folder, queue)
+            target=thread_for_each_column,
+            args=(values_set, target_folder, queue),
         )
         column_threads.append(thread)
         thread.start()
 
         for thread in column_threads:
             thread.join()
+        print(os.getpid, " ended")
 
 
 @eel.expose
@@ -179,6 +166,19 @@ def search(input_target_file, input_target_columns, input_target_folders):
             folder_processes.append(p)
             p.start()
 
+        while any([p.is_alive() for p in folder_processes]):
+            if not queue.empty():
+                data = queue.get()
+                processQueueData(data)
+
+        while not queue.empty():
+            data = queue.get()
+            eel.updateCount(len(files))
+            add_to_found_files(
+                data["found_file"]["target_file"],
+                data["found_file"]["input_string"],
+            )
+
         for process in folder_processes:
             process.join()
         end = time.time()
@@ -208,7 +208,7 @@ def search(input_target_file, input_target_columns, input_target_folders):
 @eel.expose
 def handleMorePage(_page):
     page = int(_page)
-    files_per_page = min(files_per_page, len(found_files[search_keys[page]]))
+    files_per_page = min(FILES_PER_PAGE, len(found_files[search_keys[page]]))
     return json.dumps(
         {
             "files": found_files[search_keys[page]][:files_per_page],
@@ -236,11 +236,11 @@ def handleNextPage():
     return json.dumps(
         {
             "files": found_files[search_keys[nextPage]][:FILES_PER_PAGE],
-            "search_key": all_search_key[nextPage],
+            "search_key": search_keys[nextPage],
             "number_of_files_found": len(files),
             "page": nextPage,
-            "total_page": len(all_search_key),
-            "files_length": len(found_files[all_search_key[nextPage]]),
+            "total_page": len(search_keys),
+            "files_length": len(found_files[search_keys[nextPage]]),
             "has_more": has_more,
         }
     )
@@ -256,35 +256,31 @@ def handleBackPage():
         currentPage = -1
         return json.dumps({"error": "No data to show"}, default=str)
     currentPage = nextPage
-    if len(found_files[all_search_key[nextPage]]) > files_per_page:
+    if len(found_files[search_keys[nextPage]]) > files_per_page:
         has_more = True
     currentPage = nextPage
     return json.dumps(
         {
-            "files": found_files[all_search_key[nextPage]][:files_per_page],
-            "search_key": all_search_key[nextPage],
+            "files": found_files[search_keys[nextPage]][:files_per_page],
+            "search_key": search_keys[nextPage],
             "number_of_files_found": len(files),
             "page": nextPage,
-            "total_page": len(all_search_key),
-            "files_length": len(found_files[all_search_key[nextPage]]),
+            "total_page": len(search_keys),
+            "files_length": len(found_files[search_keys[nextPage]]),
             "has_more": has_more,
         }
     )
 
 
-def updateEelCount():
+def processQueueData(data):
     eel.updateCount(len(files))
-
-
-class SearchTool:
-    def __init__(self, eel) -> None:
-        self.eel = eel
-
-    def updateEelCount(self):
-        self.eel.updateCount(len(files))
+    add_to_found_files(
+        data["found_file"]["target_file"],
+        data["found_file"]["input_string"],
+    )
 
 
 if __name__ == "__main__":
     eel.init("web")
     # search_tool = SearchTool(eel)
-    eel.start("index.html", size=(1000, 600), port=3100)
+    eel.start("index.html", size=(1000, 600), port=3000)
