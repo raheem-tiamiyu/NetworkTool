@@ -72,28 +72,77 @@ def thread_for_each_column(columns_values, target_folder, queue):
                         break
 
 
+def scandir_search_folders(folder, columns_values, target_columns, thread_name, queue):
+    for entry in os.scandir(folder):
+        if entry.is_dir(follow_symlinks=True):
+            scandir_search_folders(
+                entry, columns_values, target_columns, thread_name, queue
+            )
+        else:
+            for input_string in columns_values[0]:
+                filename = entry.name
+                if input_string in filename.lower():
+                    with found_files_lock:
+                        target_file = entry.path
+                        print(input_string, entry.name, target_file)
+                    queue.put(
+                        {
+                            "found_file": {
+                                "target_file": target_file,
+                                "input_string": input_string,
+                            }
+                        }
+                    )
+
+
+def list_files(directory):
+    return [os.path.join(directory, f) for f in os.listdir(directory)]
+
+
 def search_folders(folder, columns_values, target_columns, thread_name, queue):
     target_folder = os.walk(os.path.normpath(folder))
+    # test
+
+    directories = list_files(folder)
+    dir_processes = []
+    for _dir in directories:
+        p = multiprocessing.Process(
+            target=scandir_search_folders,
+            args=(
+                _dir,
+                columns_values,
+                target_columns,
+                directories.index(_dir),
+                queue,
+            ),
+        )
+        dir_processes.append(p)
+        p.start()
+
+    for process in dir_processes:
+        process.join()
+
+    # ----
     # print(str(thread_name) + " searching: ", target_folder)
     # print(os.getpid(), " started")
 
-    column_threads = []
+    # column_threads = []
 
-    for column_index in range(len(columns_values)):
-        values_set = set(
-            value.lower() for value in columns_values[column_index] if value != ""
-        )
-        print("Searching ", target_columns[column_index])
-        thread = Thread(
-            target=thread_for_each_column,
-            args=(values_set, target_folder, queue),
-        )
-        column_threads.append(thread)
-        thread.start()
+    # for column_index in range(len(columns_values)):
+    #     values_set = set(
+    #         value.lower() for value in columns_values[column_index] if value != ""
+    #     )
+    #     print("Searching ", target_columns[column_index])
+    #     thread = Thread(
+    #         target=thread_for_each_column,
+    #         args=(values_set, target_folder, queue),
+    #     )
+    #     column_threads.append(thread)
+    #     thread.start()
 
-        for thread in column_threads:
-            thread.join()
-        print(os.getpid, " ended")
+    #     for thread in column_threads:
+    #         thread.join()
+    #     print(os.getpid, " ended")
 
 
 @eel.expose
