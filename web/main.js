@@ -1,15 +1,38 @@
+function proccessUploadedFile(buffer, target_columns, target_folders) {
+  let bytes = new Uint8Array(buffer);
+  let binaryString = "";
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binaryString += String.fromCharCode(bytes[i]);
+  }
+  let base64String = btoa(binaryString);
+  eel.search(base64String, target_columns, target_folders)(displayFiles);
+}
+
 function findFiles() {
-  var target_file = document.getElementById("target-file").value.trim();
-  var target_columns = document.getElementById("target-columns").value.trim();
-  var target_folders = document.getElementById("target-folders").value.trim();
+  let target_file = document.getElementById("target-file").value.trim();
+  let target_file_upload =
+    document.getElementById("target-file-upload").files[0];
+
+  let target_columns = document.getElementById("target-columns").value.trim();
+  let target_folders = document.getElementById("target-folders").value.trim();
+  if (target_file_upload) {
+    let reader = new FileReader();
+    reader.onload = function (e) {
+      proccessUploadedFile(e.target.result, target_columns, target_folders);
+    };
+    reader.readAsArrayBuffer(target_file_upload);
+  } else {
+    eel.search(target_file, target_columns, target_folders)(displayFiles);
+  }
+
   document.getElementById("loading").style.display = "flex";
-  eel.search(target_file, target_columns, target_folders)(displayFiles);
 }
 
 function displayFiles(response) {
   const data = JSON.parse(response);
   document.getElementById("loading").style.display = "none";
   if (data.error) {
+    document.getElementById("loading").innerHTML("An error has occured");
     var resultContainer = document.getElementById("error-container");
     var foundFilesDiv = document.getElementById("found-files-table-body");
     foundFilesDiv.innerHTML = "";
@@ -36,7 +59,7 @@ function displayFiles(response) {
     "search_key"
   ).innerHTML = `<h6 class="font-bold text-md flex gap-6"><span class="text-gray-600">Page${
     page + 1
-  }/${total_page} </span>${search_key}</h6><button class="block focus:outline-none text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2" onclick='handleDeleteAll("${filenames}", "${search_key}");' >Delete all</button>`;
+  }/${total_page} </span>${search_key.toUpperCase()}</h6><button class="block focus:outline-none text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2" onclick='handleDeleteAll("${filenames}", "${search_key}");' >Delete all</button>`;
 
   files.map((file, index) => {
     foundFilesDiv.innerHTML += fileTemplate(file, search_key, index);
@@ -55,11 +78,11 @@ function displayFiles(response) {
 function fileTemplate(filepath, search_key, index) {
   const filename = `file-${filepath.split("\\").pop()}-${index}`;
 
-  return `<tr name="${filename}" data-filepath="${filepath}" class="border-b hover:bg-gray-80 odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800 dark:border-gray-700">
+  return `<tr name="${filename}" data-filepath="${filepath}" class="border-b hover:bg-gray-100 odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50">
                 <th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">
                     ${filename.split("-")[1]}
                 </th>
-                <td class="px-6 py-4">
+                <td class="px-6 py-4 text-gray-700">
                     ${filepath}
                 </td>
                 <td class="px-6 py-4">
@@ -110,3 +133,7 @@ function updateCount(i) {
   const countDiv = document.getElementById("file-count");
   countDiv.innerHTML = `${i} File(s) found`;
 }
+
+// window.onload = () => {
+//   eel.check_for_version_update();
+// };

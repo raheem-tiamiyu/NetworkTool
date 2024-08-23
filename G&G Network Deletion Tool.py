@@ -3,6 +3,9 @@ import re
 import time
 import eel
 import json
+import base64
+import requests
+from io import BytesIO
 import multiprocessing
 import pandas as pd
 from concurrent.futures import ThreadPoolExecutor
@@ -10,6 +13,8 @@ from threading import Thread, Lock
 from collections import defaultdict
 
 
+VERSION = "1.0.0"
+VERSION_URL = f"https://github.com/Tosvng/GGNDTVersioning/blob/03fbc5297cc590ea830d3317bf262bfc21f2df4d/version.txt"
 found_files_lock = Lock()
 misses_lock = Lock()
 found_files = defaultdict(list)
@@ -18,7 +23,17 @@ misses = defaultdict(list)
 search_keys = []
 
 currentPage = 0
-FILES_PER_PAGE = 20
+FILES_PER_PAGE = 100
+
+
+@eel.expose
+def check_for_version_update():
+    try:
+        # print()
+        response = requests.get(VERSION_URL)
+        print(response)
+    except Exception as e:
+        print(e)
 
 
 def get_exl_column_values(target_columns, columns):
@@ -49,65 +64,75 @@ def add_to_found_files(target_file, search_key):
     found_files[search_key].append(target_file)
 
 
-def thread_for_each_column(columns_values, target_folder, queue):
-    target_file = None
+def compare_names(search_key, lower_file, filename, dirpath, queue):
+    if search_key in lower_file:
+        with found_files_lock:
+            target_file = os.path.join(dirpath, filename)
+            # print(input_string, filename, target_file)
+        queue.put(
+            {
+                "found_file": {
+                    "target_file": target_file,
+                    "input_string": search_key,
+                }
+            }
+        )
 
+
+def thread_for_each_column(columns_values, target_folder, queue):
     for dirpath, __, filenames in target_folder:
         for filename in filenames:
             lower_filename = filename.lower()
             if any([input_string in lower_filename for input_string in columns_values]):
                 for input_string in columns_values:
-                    if input_string in lower_filename:
-                        with found_files_lock:
-                            target_file = os.path.join(dirpath, filename)
-                            # print(input_string, filename, target_file)
-                        queue.put(
-                            {
-                                "found_file": {
-                                    "target_file": target_file,
-                                    "input_string": input_string,
-                                }
-                            }
-                        )
-                        break
-
-
-def scandir_search_folders(folder, columns_values, target_columns, thread_name, queue):
-    for entry in os.scandir(folder):
-        if entry.is_dir(follow_symlinks=True):
-            scandir_search_folders(
-                entry, columns_values, target_columns, thread_name, queue
-            )
-        else:
-            for input_string in columns_values[0]:
-                filename = entry.name
-                if input_string in filename.lower():
-                    with found_files_lock:
-                        target_file = entry.path
-                        print(input_string, entry.name, target_file)
-                    queue.put(
-                        {
-                            "found_file": {
-                                "target_file": target_file,
-                                "input_string": input_string,
-                            }
-                        }
+                    compare_names(
+                        input_string, lower_filename, filename, dirpath, queue
                     )
+                    break
 
 
 def list_files(directory):
     return [os.path.join(directory, f) for f in os.listdir(directory)]
 
 
-def search_folders(folder, columns_values, target_columns, thread_name, queue):
+def sub_search_folders(folder, columns_values, target_columns, thread_name, queue):
     target_folder = os.walk(os.path.normpath(folder))
-    # test
+    column_threads = []
+    for column_index in range(len(columns_values)):
+        values_set = set(
+            value.lower() for value in columns_values[column_index] if value != ""
+        )
+        print("Searching ", target_columns[column_index])
+        thread = Thread(
+            target=thread_for_each_column,
+            args=(values_set, target_folder, queue),
+        )
+        column_threads.append(thread)
+        thread.start()
 
+        for thread in column_threads:
+            thread.join()
+
+
+def search_folders(folder, columns_values, target_columns, thread_name, queue):
+    # target_folder = os.walk(os.path.normpath(folder))
+
+    # tests -- dont forget to handle if a file is in the base directory
+    # print(os.getpid, " ended")
+    # run a new process for each folder in the current directory
     directories = list_files(folder)
     dir_processes = []
     for _dir in directories:
+        # if there are files in the directory check for a match in the column values
+        if os.path.isfile(folder + "/" + _dir):
+            lower_filename = _dir.lower()
+            if any([input_string in lower_filename for input_string in columns_values]):
+                for input_string in columns_values:
+                    compare_names(input_string, lower_filename, _dir, folder, queue)
+                    break
+
         p = multiprocessing.Process(
-            target=scandir_search_folders,
+            target=sub_search_folders,
             args=(
                 _dir,
                 columns_values,
@@ -122,7 +147,8 @@ def search_folders(folder, columns_values, target_columns, thread_name, queue):
     for process in dir_processes:
         process.join()
 
-    # ----
+    # --
+
     # print(str(thread_name) + " searching: ", target_folder)
     # print(os.getpid(), " started")
 
@@ -143,6 +169,7 @@ def search_folders(folder, columns_values, target_columns, thread_name, queue):
     #     for thread in column_threads:
     #         thread.join()
     #     print(os.getpid, " ended")
+    # print(os.getpid(), " ended")
 
 
 @eel.expose
@@ -186,17 +213,19 @@ def clean_user_input(value):
 
 @eel.expose
 def search(input_target_file, input_target_columns, input_target_folders):
-    start = time.time()
+    # start = time.time()
     queue = multiprocessing.Queue()
 
     print("Starting search")
     try:
+        data = base64.b64decode(input_target_file)
         target_columns = clean_user_input(input_target_columns)
         folders = clean_user_input(input_target_folders)
 
         file = pd.read_excel(
-            (input_target_file), dtype=str, usecols=target_columns
+            (BytesIO(data)), engine="openpyxl", dtype=str, usecols=target_columns
         ).fillna(value="")
+        print(file.head())
         columns_as_list = get_exl_column_values(target_columns, file)
 
         folder_processes = []
@@ -230,23 +259,23 @@ def search(input_target_file, input_target_columns, input_target_folders):
 
         for process in folder_processes:
             process.join()
-        end = time.time()
-        print(end - start)
+        # end = time.time()
+        # print(end - start)
 
         global search_keys
         search_keys = list(found_files.keys())
         if len(search_keys) == 0:
             return json.dumps({"error": "No files found"})
-        FILES_PER_PAGE = min(20, len(found_files[search_keys[0]]))
+        files_per_page = min(FILES_PER_PAGE, len(found_files[search_keys[0]]))
 
         return json.dumps(
             {
-                "files": found_files[search_keys[0]][:FILES_PER_PAGE],
+                "files": found_files[search_keys[0]][:files_per_page],
                 "search_key": search_keys[0],
                 "number_of_files_found": len(files),
                 "page": 0,
                 "total_page": len(search_keys),
-                "has_more": len(found_files[search_keys[0]]) > 20,
+                "has_more": len(found_files[search_keys[0]]) > files_per_page,
             }
         )
 
@@ -299,7 +328,7 @@ def handleNextPage():
 def handleBackPage():
     global currentPage
     has_more = False
-    files_per_page = 20
+    files_per_page = FILES_PER_PAGE
     nextPage = currentPage - 1
     if nextPage <= -1:
         currentPage = -1
