@@ -1,3 +1,30 @@
+class Timer {
+  constructor() {
+    this.start = Date.now();
+    this.stop = false;
+  }
+  displayTimer() {
+    setInterval(() => {
+      if (!this.stop) {
+        const timeElapsed = Date.now() - this.start;
+        const sec = Math.floor(timeElapsed / 1000);
+        const minutes = Math.floor(sec / 60);
+        const seconds = sec % 60;
+        document.getElementById("time").innerHTML = `${minutes}:${seconds}`;
+      }
+    }, 3000);
+  }
+
+  startTimer() {
+    this.start = Date.now();
+  }
+  stopTimer() {
+    this.stop = true;
+  }
+}
+
+const timer = new Timer();
+
 function proccessUploadedFile(buffer, target_columns, target_folders) {
   let bytes = new Uint8Array(buffer);
   let binaryString = "";
@@ -15,6 +42,9 @@ function findFiles() {
 
   let target_columns = document.getElementById("target-columns").value.trim();
   let target_folders = document.getElementById("target-folders").value.trim();
+  timer.startTimer();
+  timer.displayTimer();
+
   if (target_file_upload) {
     let reader = new FileReader();
     reader.onload = function (e) {
@@ -29,6 +59,7 @@ function findFiles() {
 }
 
 function displayFiles(response) {
+  timer.stopTimer();
   const data = JSON.parse(response);
   document.getElementById("loading").style.display = "none";
   if (data.error) {
@@ -136,7 +167,9 @@ function updateCount(i) {
 
 eel.expose(progressUpdate);
 function progressUpdate(progress) {
-  document.getElementById("folder-searched").innerHTML = `<p>${progress}</p>`;
+  document.getElementById(
+    "folder-searched"
+  ).innerHTML = `<p class="mb-1 text-sm font-medium text-gray-900">${progress}</p>`;
 }
 
 // window.onload = () => {

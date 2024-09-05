@@ -21,6 +21,8 @@ found_files = defaultdict(list)
 files = []
 misses = defaultdict(list)
 search_keys = []
+files_searched = 0
+folders_searched = 0
 
 currentPage = 0
 FILES_PER_PAGE = 100
@@ -66,29 +68,34 @@ def add_to_found_files(target_file, search_key):
 
 def compare_names(search_key, lower_file, filename, dirpath, queue):
     if search_key in lower_file:
-        with found_files_lock:
-            target_file = os.path.join(dirpath, filename)
-            # print(input_string, filename, target_file)
-        queue.put(
+        target_file = os.path.join(dirpath, filename)
+        add_message_to_queue(
+            queue,
             {
                 "found_file": {
                     "target_file": target_file,
                     "input_string": search_key,
                 }
-            }
+            },
         )
 
 
+def add_message_to_queue(queue, message):
+    with found_files_lock:
+        queue.put(message)
+
+
 def thread_for_each_column(columns_values, target_folder, queue):
+
     for dirpath, __, filenames in target_folder:
         for filename in filenames:
+            add_message_to_queue(
+                queue,
+                {"report": {"file": f"Searching file {filename} in {dirpath}"}},
+            )
             lower_filename = filename.lower()
-            if any([input_string in lower_filename for input_string in columns_values]):
-                for input_string in columns_values:
-                    compare_names(
-                        input_string, lower_filename, filename, dirpath, queue
-                    )
-                    break
+            for input_string in columns_values:
+                compare_names(input_string, lower_filename, filename, dirpath, queue)
 
 
 def list_files(directory):
@@ -96,22 +103,30 @@ def list_files(directory):
 
 
 def sub_search_folders(folder, columns_values, target_columns, thread_name, queue):
-    target_folder = os.walk(os.path.normpath(folder))
-    column_threads = []
-    for column_index in range(len(columns_values)):
-        values_set = set(
-            value.lower() for value in columns_values[column_index] if value != ""
+    try:
+        target_folder = os.walk(os.path.normpath(folder))
+        add_message_to_queue(
+            queue,
+            {"report": {"file": f"Searching {os.path.normpath(folder)}"}},
         )
-        print("Searching ", target_columns[column_index])
-        thread = Thread(
-            target=thread_for_each_column,
-            args=(values_set, target_folder, queue),
-        )
-        column_threads.append(thread)
-        thread.start()
+        print(f"{os.getpid()} searching {os.path.normpath(folder)}")
+        column_threads = []
+        for column_index in range(len(columns_values)):
+            values_set = set(
+                value.lower() for value in columns_values[column_index] if value != ""
+            )
+            print(f"{os.getpid()} Searching ", target_columns[column_index])
+            thread = Thread(
+                target=thread_for_each_column,
+                args=(values_set, target_folder, queue),
+            )
+            column_threads.append(thread)
+            thread.start()
 
-        for thread in column_threads:
-            thread.join()
+            for thread in column_threads:
+                thread.join()
+    except Exception as e:
+        print(e)
 
 
 def search_folders(folder, columns_values, target_columns, thread_name, queue):
@@ -120,32 +135,46 @@ def search_folders(folder, columns_values, target_columns, thread_name, queue):
     # tests -- dont forget to handle if a file is in the base directory
     # print(os.getpid, " ended")
     # run a new process for each folder in the current directory
-    directories = list_files(folder)
-    dir_processes = []
-    for _dir in directories:
-        # if there are files in the directory check for a match in the column values
-        if os.path.isfile(folder + "/" + _dir):
-            lower_filename = _dir.lower()
-            if any([input_string in lower_filename for input_string in columns_values]):
-                for input_string in columns_values:
-                    compare_names(input_string, lower_filename, _dir, folder, queue)
-                    break
+    try:
+        directories = list_files(folder)
+        dir_processes = []
+        for _dir in directories:
+            # if there are files in the directory check for a match in the column values
+            if os.path.isfile(os.path.join(folder, _dir)):
+                # Check each column
+                for column_index in range(len(columns_values)):
+                    add_message_to_queue(
+                        queue,
+                        {"report": {"file": f"Searching file {_dir} in {folder}"}},
+                    )
+                    print(f"{os.getpid()} Searching file {_dir} in {folder}")
+                    # clean column values
+                    values_set = set(
+                        value.lower()
+                        for value in columns_values[column_index]
+                        if value != ""
+                    )
+                    lower_filename = _dir.lower()
+                    for input_string in values_set:
+                        compare_names(input_string, lower_filename, _dir, folder, queue)
+            else:
+                p = multiprocessing.Process(
+                    target=sub_search_folders,
+                    args=(
+                        _dir,
+                        columns_values,
+                        target_columns,
+                        directories.index(_dir),
+                        queue,
+                    ),
+                )
+                dir_processes.append(p)
+                p.start()
 
-        p = multiprocessing.Process(
-            target=sub_search_folders,
-            args=(
-                _dir,
-                columns_values,
-                target_columns,
-                directories.index(_dir),
-                queue,
-            ),
-        )
-        dir_processes.append(p)
-        p.start()
-
-    for process in dir_processes:
-        process.join()
+        for process in dir_processes:
+            process.join()
+    except Exception as e:
+        print(e)
 
     # --
 
@@ -225,7 +254,6 @@ def search(input_target_file, input_target_columns, input_target_folders):
         file = pd.read_excel(
             (BytesIO(data)), engine="openpyxl", dtype=str, usecols=target_columns
         ).fillna(value="")
-        print(file.head())
         columns_as_list = get_exl_column_values(target_columns, file)
 
         folder_processes = []
@@ -244,18 +272,16 @@ def search(input_target_file, input_target_columns, input_target_folders):
             folder_processes.append(p)
             p.start()
 
+        # keep checking for new data in the queue while the processes are still alive
         while any([p.is_alive() for p in folder_processes]):
             if not queue.empty():
                 data = queue.get()
                 processQueueData(data)
 
+        # Double check the queue after the processes are done
         while not queue.empty():
             data = queue.get()
-            eel.updateCount(len(files))
-            add_to_found_files(
-                data["found_file"]["target_file"],
-                data["found_file"]["input_string"],
-            )
+            processQueueData(data)
 
         for process in folder_processes:
             process.join()
@@ -280,48 +306,57 @@ def search(input_target_file, input_target_columns, input_target_folders):
         )
 
     except Exception as e:
+        print(e)
         return json.dumps({"error": e}, default=str)
 
 
 @eel.expose
 def handleMorePage(_page):
-    page = int(_page)
-    files_per_page = min(FILES_PER_PAGE, len(found_files[search_keys[page]]))
-    return json.dumps(
-        {
-            "files": found_files[search_keys[page]][:files_per_page],
-            "search_key": search_keys[page],
-            "number_of_files_found": len(files),
-            "page": page,
-            "total_page": len(search_keys),
-            "files_length": len(found_files[search_keys[page]]),
-            "has_more": len(found_files[search_keys[page]]) > FILES_PER_PAGE,
-        }
-    )
+    try:
+        page = int(_page)
+        files_per_page = min(FILES_PER_PAGE, len(found_files[search_keys[page]]))
+        return json.dumps(
+            {
+                "files": found_files[search_keys[page]][:files_per_page],
+                "search_key": search_keys[page],
+                "number_of_files_found": len(files),
+                "page": page,
+                "total_page": len(search_keys),
+                "files_length": len(found_files[search_keys[page]]),
+                "has_more": len(found_files[search_keys[page]]) > FILES_PER_PAGE,
+            }
+        )
+    except Exception as e:
+        print(e)
+        return json.dumps({"error": e}, default=str)
 
 
 @eel.expose
 def handleNextPage():
-    global currentPage
-    has_more = False
-    nextPage = 1 + currentPage
-    if nextPage > len(search_keys) - 1:
-        currentPage = len(search_keys)
-        return json.dumps({"error": "All done!"}, default=str)
-    if len(found_files[search_keys[nextPage]]) > FILES_PER_PAGE:
-        has_more = True
-    currentPage = nextPage
-    return json.dumps(
-        {
-            "files": found_files[search_keys[nextPage]][:FILES_PER_PAGE],
-            "search_key": search_keys[nextPage],
-            "number_of_files_found": len(files),
-            "page": nextPage,
-            "total_page": len(search_keys),
-            "files_length": len(found_files[search_keys[nextPage]]),
-            "has_more": has_more,
-        }
-    )
+    try:
+        global currentPage
+        has_more = False
+        nextPage = 1 + currentPage
+        if nextPage > len(search_keys) - 1:
+            currentPage = len(search_keys)
+            return json.dumps({"error": "All done!"}, default=str)
+        if len(found_files[search_keys[nextPage]]) > FILES_PER_PAGE:
+            has_more = True
+        currentPage = nextPage
+        return json.dumps(
+            {
+                "files": found_files[search_keys[nextPage]][:FILES_PER_PAGE],
+                "search_key": search_keys[nextPage],
+                "number_of_files_found": len(files),
+                "page": nextPage,
+                "total_page": len(search_keys),
+                "files_length": len(found_files[search_keys[nextPage]]),
+                "has_more": has_more,
+            }
+        )
+    except Exception as e:
+        print(e)
+        return json.dumps({"error": e}, default=str)
 
 
 @eel.expose
@@ -351,14 +386,18 @@ def handleBackPage():
 
 
 def processQueueData(data):
-    eel.updateCount(len(files))
-    add_to_found_files(
-        data["found_file"]["target_file"],
-        data["found_file"]["input_string"],
-    )
+    if "report" in data:
+        eel.progressUpdate(data["report"]["file"])
+    elif "found_file" in data:
+        add_to_found_files(
+            data["found_file"]["target_file"],
+            data["found_file"]["input_string"],
+        )
+        eel.updateCount(len(files))
 
 
 if __name__ == "__main__":
+    multiprocessing.freeze_support()
     eel.init("web")
     # search_tool = SearchTool(eel)
     eel.start("index.html", size=(1000, 600), port=3000)
