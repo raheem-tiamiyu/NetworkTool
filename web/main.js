@@ -32,7 +32,7 @@ function displayFiles(response) {
   const data = JSON.parse(response);
   document.getElementById("loading").style.display = "none";
   if (data.error) {
-    document.getElementById("loading").innerHTML("An error has occured");
+    document.getElementById("loading").innerHTML = "An error has occured";
     var resultContainer = document.getElementById("error-container");
     var foundFilesDiv = document.getElementById("found-files-table-body");
     foundFilesDiv.innerHTML = "";
@@ -132,6 +132,11 @@ eel.expose(updateCount);
 function updateCount(i) {
   const countDiv = document.getElementById("file-count");
   countDiv.innerHTML = `${i} File(s) found`;
+}
+
+eel.expose(progressUpdate);
+function progressUpdate(progress) {
+  document.getElementById("folder-searched").innerHTML = `<p>${progress}</p>`;
 }
 
 // window.onload = () => {
