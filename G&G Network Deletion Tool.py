@@ -1,5 +1,6 @@
 import os
 import re
+import sys
 import time
 import eel
 import json
@@ -28,14 +29,14 @@ currentPage = 0
 FILES_PER_PAGE = 100
 
 
-@eel.expose
-def check_for_version_update():
-    try:
-        # print()
-        response = requests.get(VERSION_URL)
-        print(response)
-    except Exception as e:
-        print(e)
+# @eel.expose
+# def check_for_version_update():
+#     try:
+#         # print()
+#         response = requests.get(VERSION_URL)
+#         print(response)
+#     except Exception as e:
+#         print(e)
 
 
 def get_exl_column_values(target_columns, columns):
@@ -109,13 +110,13 @@ def sub_search_folders(folder, columns_values, target_columns, thread_name, queu
             queue,
             {"report": {"file": f"Searching {os.path.normpath(folder)}"}},
         )
-        print(f"{os.getpid()} searching {os.path.normpath(folder)}")
+        # print(f"{os.getpid()} searching {os.path.normpath(folder)}")
         column_threads = []
         for column_index in range(len(columns_values)):
             values_set = set(
                 value.lower() for value in columns_values[column_index] if value != ""
             )
-            print(f"{os.getpid()} Searching ", target_columns[column_index])
+            # print(f"{os.getpid()} Searching ", target_columns[column_index])
             thread = Thread(
                 target=thread_for_each_column,
                 args=(values_set, target_folder, queue),
@@ -126,7 +127,8 @@ def sub_search_folders(folder, columns_values, target_columns, thread_name, queu
             for thread in column_threads:
                 thread.join()
     except Exception as e:
-        print(e)
+        # print(e)
+        pass
 
 
 def search_folders(folder, columns_values, target_columns, thread_name, queue):
@@ -173,32 +175,33 @@ def search_folders(folder, columns_values, target_columns, thread_name, queue):
 
         for process in dir_processes:
             process.join()
+
+        # --
+
+        # print(str(thread_name) + " searching: ", target_folder)
+        # print(os.getpid(), " started")
+
+        # column_threads = []
+
+        # for column_index in range(len(columns_values)):
+        #     values_set = set(
+        #         value.lower() for value in columns_values[column_index] if value != ""
+        #     )
+        #     thread = Thread(
+        #         target=thread_for_each_column,
+        #         args=(values_set, target_folder, queue),
+        #     )
+        #     column_threads.append(thread)
+        #     thread.start()
+
+        #     for thread in column_threads:
+        #         thread.join()
+        #     print(os.getpid, " ended")
+        # print(os.getpid(), " ended")
+
     except Exception as e:
-        print(e)
-
-    # --
-
-    # print(str(thread_name) + " searching: ", target_folder)
-    # print(os.getpid(), " started")
-
-    # column_threads = []
-
-    # for column_index in range(len(columns_values)):
-    #     values_set = set(
-    #         value.lower() for value in columns_values[column_index] if value != ""
-    #     )
-    #     print("Searching ", target_columns[column_index])
-    #     thread = Thread(
-    #         target=thread_for_each_column,
-    #         args=(values_set, target_folder, queue),
-    #     )
-    #     column_threads.append(thread)
-    #     thread.start()
-
-    #     for thread in column_threads:
-    #         thread.join()
-    #     print(os.getpid, " ended")
-    # print(os.getpid(), " ended")
+        # print(e)
+        pass
 
 
 @eel.expose
@@ -215,7 +218,7 @@ def delete_file(file_path, search_key):
             else:
                 found_files[search_key] = found_files[search_key][:index]
         os.remove(file_path)
-        print(f"{file_path} has been deleted.")
+        # print(f"{file_path} has been deleted.")
         eel.updateCount(len(files))
         return True
 
@@ -245,15 +248,20 @@ def search(input_target_file, input_target_columns, input_target_folders):
     # start = time.time()
     queue = multiprocessing.Queue()
 
-    print("Starting search")
+    # print("Starting search")
     try:
-        data = base64.b64decode(input_target_file)
         target_columns = clean_user_input(input_target_columns)
         folders = clean_user_input(input_target_folders)
 
-        file = pd.read_excel(
-            (BytesIO(data)), engine="openpyxl", dtype=str, usecols=target_columns
-        ).fillna(value="")
+        if os.path.isfile(input_target_file):
+            file = pd.read_excel(
+                (input_target_file), dtype=str, usecols=target_columns
+            ).fillna(value="")
+        else:
+            data = base64.b64decode(input_target_file)
+            file = pd.read_excel(
+                (BytesIO(data)), engine="openpyxl", dtype=str, usecols=target_columns
+            ).fillna(value="")
         columns_as_list = get_exl_column_values(target_columns, file)
 
         folder_processes = []
@@ -306,7 +314,7 @@ def search(input_target_file, input_target_columns, input_target_folders):
         )
 
     except Exception as e:
-        print(e)
+        # print(e)
         return json.dumps({"error": e}, default=str)
 
 
@@ -327,7 +335,7 @@ def handleMorePage(_page):
             }
         )
     except Exception as e:
-        print(e)
+        # print(e)
         return json.dumps({"error": e}, default=str)
 
 
@@ -355,7 +363,7 @@ def handleNextPage():
             }
         )
     except Exception as e:
-        print(e)
+        # print(e)
         return json.dumps({"error": e}, default=str)
 
 
@@ -396,8 +404,16 @@ def processQueueData(data):
         eel.updateCount(len(files))
 
 
+def resource_path(relative_path):
+    if hasattr(sys, "_MEIPASS"):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath("."), relative_path)
+
+
 if __name__ == "__main__":
     multiprocessing.freeze_support()
+    multiprocessing.set_start_method("spawn")
+    web_folder = resource_path("web")
     eel.init("web")
     # search_tool = SearchTool(eel)
     eel.start("index.html", size=(1000, 600), port=3000)
