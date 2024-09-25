@@ -10,13 +10,16 @@ class Timer {
         const sec = Math.floor(timeElapsed / 1000);
         const minutes = Math.floor(sec / 60);
         const seconds = sec % 60;
-        document.getElementById("time").innerHTML = `${minutes}:${seconds}`;
+        document.getElementById(
+          "time"
+        ).innerHTML = `${minutes} minute(s):${seconds} seconds`;
       }
     }, 3000);
   }
 
   startTimer() {
     this.start = Date.now();
+    this.stop = false;
   }
   stopTimer() {
     this.stop = true;
@@ -25,14 +28,24 @@ class Timer {
 
 const timer = new Timer();
 
-function proccessUploadedFile(buffer, target_columns, target_folders) {
+function proccessUploadedFile(
+  buffer,
+  target_columns,
+  target_folders,
+  filesPerPage
+) {
   let bytes = new Uint8Array(buffer);
   let binaryString = "";
   for (let i = 0; i < bytes.byteLength; i++) {
     binaryString += String.fromCharCode(bytes[i]);
   }
   let base64String = btoa(binaryString);
-  eel.search(base64String, target_columns, target_folders)(displayFiles);
+  eel.search(
+    base64String,
+    target_columns,
+    target_folders,
+    filesPerPage
+  )(displayFiles);
 }
 
 function findFiles() {
@@ -42,17 +55,30 @@ function findFiles() {
 
   let target_columns = document.getElementById("target-columns").value.trim();
   let target_folders = document.getElementById("target-folders").value.trim();
+  let filesPerPage = document.getElementById("files-per-page").value;
   timer.startTimer();
   timer.displayTimer();
+  document.getElementById("file-count").innerHTML = "";
 
   if (target_file_upload) {
     let reader = new FileReader();
     reader.onload = function (e) {
-      proccessUploadedFile(e.target.result, target_columns, target_folders);
+      proccessUploadedFile(
+        e.target.result,
+        target_columns,
+        target_folders,
+        filesPerPage
+      );
     };
     reader.readAsArrayBuffer(target_file_upload);
   } else {
-    eel.search(target_file, target_columns, target_folders)(displayFiles);
+    console.log(target_file, target_columns, target_folders, filesPerPage);
+    eel.search(
+      target_file,
+      target_columns,
+      target_folders,
+      filesPerPage
+    )(displayFiles);
   }
 
   document.getElementById("loading").style.display = "flex";
@@ -67,7 +93,7 @@ function displayFiles(response) {
     var resultContainer = document.getElementById("error-container");
     var foundFilesDiv = document.getElementById("found-files-table-body");
     foundFilesDiv.innerHTML = "";
-    resultContainer.innerHTML = `<div><p class="text-red-600 text-lg font-bold  dark:text-white">${data.error}</p></div>`;
+    resultContainer.innerHTML = `<div><p class="text-red-500 text-lg">${data.error}</p></div>`;
     return;
   }
 
@@ -86,11 +112,13 @@ function displayFiles(response) {
     return `file-${filepath.split("\\").pop()}-${index}`;
   });
 
-  document.getElementById(
-    "search_key"
-  ).innerHTML = `<h6 class="font-bold text-md flex gap-6"><span class="text-gray-600">Page${
-    page + 1
-  }/${total_page} </span>${search_key.toUpperCase()}</h6><button class="block focus:outline-none text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2" onclick='handleDeleteAll("${filenames}", "${search_key}");' >Delete all</button>`;
+  document.getElementById("search_key").innerHTML = `
+  <h6 class="text-md flex gap-6">
+  <span class="text-gray-900">Page${page + 1}/${total_page} </span>
+  </h6>
+  <h6 class="font-bold text-md">${search_key.toUpperCase()}</h6>
+  <button class="block focus:outline-none text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 transition-all" onclick='handleDeleteAll("${filenames}", "${search_key}");' >Delete all</button>
+  `;
 
   files.map((file, index) => {
     foundFilesDiv.innerHTML += fileTemplate(file, search_key, index);
@@ -102,14 +130,16 @@ function displayFiles(response) {
     ).innerHTML = `<button class="my-5 py-2.5 px-5 rounded-lg text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg" onclick='handleShowMore("${page}");'>Show more</button>`;
   }
 
-  const nexpPage = document.getElementById("next-button");
+  let nexpPage = document.getElementById("next-button-top");
+  nexpPage.style.display = "flex";
+  nexpPage = document.getElementById("next-button-bottom");
   nexpPage.style.display = "flex";
 }
 
 function fileTemplate(filepath, search_key, index) {
   const filename = `file-${filepath.split("\\").pop()}-${index}`;
 
-  return `<tr name="${filename}" data-filepath="${filepath}" class="border-b hover:bg-gray-100 odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50">
+  return `<tr name="${filename}" data-filepath="${filepath}" class="border-b hover:bg-gray-100 odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 transition-all">
                 <th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">
                     ${filename.split("-")[1]}
                 </th>
@@ -118,38 +148,53 @@ function fileTemplate(filepath, search_key, index) {
                 </td>
                 <td class="px-6 py-4">
                     <div class="flex justify-center items-end">
-                        <button class="py-2.5 px-5 me-2 mb-2 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100" onclick="handleKeepFile('${filename}', '${search_key}')">Keep</button>
-                        <button class="text-white bg-gray-800 hover:bg-gray-900 focus:outline-none focus:ring-4 focus:ring-gray-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2" onclick="handleDeleteFile('${filename}', '${search_key}'); ">Delete</button>
+                        <button class="py-2.5 px-5 me-2 mb-2 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100 transition-all" onclick="handleKeepFile('${filename}', '${search_key}')">Keep</button>
+                        <button class="text-white bg-gray-800 hover:bg-gray-900 focus:outline-none focus:ring-4 focus:ring-gray-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 transition-all" onclick="handleDeleteFile('${filename}', '${search_key}'); ">Delete</button>
                     </div>
                 </td>
             </tr>`;
 }
 
 function handleShowMore(page) {
-  eel.handleMorePage(page)(displayFiles);
+  let filesPerPage = document.getElementById("files-per-page").value;
+  eel.show_more_files(page, filesPerPage)(displayFiles);
 }
 
 function handleNextPage() {
-  eel.handleNextPage()(displayFiles);
+  let filesPerPage = document.getElementById("files-per-page").value;
+  eel.get_next_page(filesPerPage)(displayFiles);
 }
 function handleBackPage() {
-  eel.handleBackPage()(displayFiles);
+  let filesPerPage = document.getElementById("files-per-page").value;
+  eel.get_previous_page(filesPerPage)(displayFiles);
 }
 
 function handleDeleteAll(_filenames, search_key) {
-  const filenames = _filenames.split(",");
-  console.log(filenames);
-  filenames.map((file) => {
-    handleDeleteFile(file, search_key);
-  });
+  var userConfirmed = confirm(
+    `Are you sure you want to delete all files for ${search_key}?`
+  );
+  if (userConfirmed) {
+    const filenames = _filenames.split(",");
+    console.log(filenames);
+    filenames.map((file) => {
+      handleDeleteFile(file, search_key, true);
+    });
+    show_deleted_banner(`all ${search_key} files`);
+  }
 }
 
-function handleDeleteFile(filename, search_key) {
+function handleDeleteFile(filename, search_key, bulk = false) {
   const target = document.getElementsByName(`${filename}`);
   console.log(target);
-  const filepath = target[0].getAttribute("data-filepath");
-  target[0].remove();
-  eel.delete_file(filepath, search_key);
+
+  if (target.length) {
+    const filepath = target[0].getAttribute("data-filepath");
+    target[0].remove();
+    if (!bulk) {
+      show_deleted_banner(filepath);
+    }
+    eel.delete_file(filepath, search_key);
+  }
 }
 
 function handleKeepFile(filename, search_key) {
@@ -159,6 +204,36 @@ function handleKeepFile(filename, search_key) {
   eel.keep_file(filepath, search_key);
 }
 
+function show_deleted_banner(filepath) {
+  document.getElementById("deleted-sticky-banner-container").innerHTML = `
+  <div id="sticky-banner"  tabindex="-1" class="fixed top-0 start-0 z-50 flex justify-between w-full p-4 border-b border-red-500 bg-red-200">
+                <div class="flex items-center mx-auto">
+                    <p class="flex items-center text-sm font-normal">
+                        <span>Deleted ${filepath}</span>
+                    </p>
+                </div>
+                <div class="flex items-center ">
+                    <button data-dismiss-target="#sticky-banner" type="button" class="flex-shrink-0 inline-flex justify-center w-7 h-7 items-center  hover:bg-red-400 hover:text-gray-900 rounded-md text-sm p-1.5 transition-all" onclick='deleteBanner()' >
+                        <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
+                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
+                        </svg>
+                        <span class="sr-only">Close banner</span>
+                    </button>
+                </div>
+            </div>
+            `;
+
+  function deleteBanner() {
+    const banner = document.getElementById("sticky-banner");
+    if (banner) {
+      banner.remove();
+    }
+  }
+  setTimeout(() => {
+    deleteBanner();
+  }, 3000);
+}
+
 eel.expose(updateCount);
 function updateCount(i) {
   const countDiv = document.getElementById("file-count");
@@ -166,10 +241,11 @@ function updateCount(i) {
 }
 
 eel.expose(progressUpdate);
-function progressUpdate(progress) {
+function progressUpdate(directory, file) {
   document.getElementById(
-    "folder-searched"
-  ).innerHTML = `<p class="mb-1 text-sm font-medium text-gray-900">${progress}</p>`;
+    "directory-folder-searched"
+  ).innerHTML = `${directory}`;
+  document.getElementById("file-folder-searched").innerHTML = `${file}`;
 }
 
 // window.onload = () => {
