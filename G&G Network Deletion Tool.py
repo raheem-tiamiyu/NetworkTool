@@ -35,20 +35,8 @@ def download_new_version():
     # return "Download complete!"
     try:
         response = requests.get(DOWNLOAD_URL, stream=True, verify=False)
-        print(
-            "download",
-            os.path.join(
-                os.path.dirname(Path(__file__).parent.absolute()),
-                "G&G Network Deletion Tool.exe",
-            ),
-        )
-        with open(
-            os.path.join(
-                os.path.dirname(Path(__file__).parent.absolute()),
-                "G&G Network Deletion Tool.exe",
-            ),
-            "wb",
-        ) as file:
+        print("download", os.path.abspath(__file__))
+        with open(os.path.abspath(__file__), "wb") as file:
             for chunk in response.iter_content(chunk_size=8192):
                 file.write(chunk)
         # with open(f"dist\G&G Network Deletion Tool.exe", "rb") as source_file:
