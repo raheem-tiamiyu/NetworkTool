@@ -53,47 +53,57 @@ class SearchHandler:
 
         except Exception as e:
             self.error_handler.show_error_message(
-                message=f"An unknown error occurred while searching.\nError Details:\n{e}"
+                message=f"An unknown error occurred while the search handler was searching. {e}"
             )
 
     def get_search_keys_from_user_input(self, search_keys, specified_columns):
-        is_file_path = False
-        is_uploaded_file = False
-        # check if it a file path,
-        if os.path.isfile(search_keys):
-            is_file_path = True
-            target_columns = self.tokenize_user_input(specified_columns)
-            file = pd.read_excel(
-                (search_keys), dtype=str, usecols=target_columns
-            ).fillna(value="")
-            search_keys = self.get_exl_column_values(file, target_columns)
-
-        # if not try to decode it,
-        elif not is_file_path:
-            try:
+        try:
+            is_file_path = False
+            is_uploaded_file = False
+            # check if it a file path,
+            if os.path.isfile(search_keys):
+                is_file_path = True
                 target_columns = self.tokenize_user_input(specified_columns)
-                raw_bytes = base64.b64decode(search_keys)
                 file = pd.read_excel(
-                    (BytesIO(raw_bytes)),
-                    engine="openpyxl",
-                    dtype=str,
-                    usecols=target_columns,
+                    (search_keys), dtype=str, usecols=target_columns
                 ).fillna(value="")
                 search_keys = self.get_exl_column_values(file, target_columns)
 
-            except Exception as e:
-                search_keys = self.tokenize_user_input(search_keys)
+            # if not try to decode it,
+            elif not is_file_path:
+                try:
+                    target_columns = self.tokenize_user_input(specified_columns)
+                    raw_bytes = base64.b64decode(search_keys)
+                    file = pd.read_excel(
+                        (BytesIO(raw_bytes)),
+                        engine="openpyxl",
+                        dtype=str,
+                        usecols=target_columns,
+                    ).fillna(value="")
+                    search_keys = self.get_exl_column_values(file, target_columns)
 
-        # clean the search keys
-        search_keys = set(value.lower() for value in search_keys if value != "")
+                except Exception as e:
+                    search_keys = self.tokenize_user_input(search_keys)
 
-        return search_keys
+            # clean the search keys
+            search_keys = set(value.lower() for value in search_keys if value != "")
+
+            return search_keys
+        except Exception as e:
+            self.error_handler.show_error_message(
+                message=f"Search handler could not process the user input. {e}"
+            )
 
     def get_exl_column_values(self, file, specified_columns):
-        columns_values = []
-        for column in specified_columns:
-            columns_values += file[column].values.tolist()
-        return columns_values
+        try:
+            columns_values = []
+            for column in specified_columns:
+                columns_values += file[column].values.tolist()
+            return columns_values
+        except Exception as e:
+            self.error_handler.show_error_message(
+                message=f"Search handler could not get the specified columns. {e}"
+            )
 
     def tokenize_user_input(self, user_input):
         split_on_comma = user_input.split(",")
@@ -133,6 +143,7 @@ class SearchHandler:
                 process.join()
 
         except Exception as e:
+            print(e)
             return self.error_handler.show_error_message(
                 message=f"An error occurred while trying to search the first directory\n\n{e}"
             )
@@ -161,6 +172,7 @@ class SearchHandler:
                         )
 
         except Exception as e:
+            print(e)
             return self.error_handler.show_error_message(
                 message=f"An error occurred while trying to search the Second level directory\n\n{e}"
             )

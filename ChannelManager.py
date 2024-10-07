@@ -20,7 +20,8 @@ class ChannelManager:
         try:
             eel.progressUpdate(directory, file)
         except Exception as e:
-            print(e)
+            # print(e)
+            pass
 
     @eel.expose
     def search(search_keys, specified_columns, target_folders, files_per_page):

@@ -1,9 +1,11 @@
+eel.check_for_version_update();
 class Timer {
   constructor() {
     this.start = Date.now();
     this.stop = false;
   }
   displayTimer() {
+    // update timer every second
     setInterval(() => {
       if (!this.stop) {
         const timeElapsed = Date.now() - this.start;
@@ -14,7 +16,7 @@ class Timer {
           "time"
         ).innerHTML = `${minutes} minute(s):${seconds} seconds`;
       }
-    }, 3000);
+    }, 1000);
   }
 
   startTimer() {
@@ -28,7 +30,7 @@ class Timer {
 
 const timer = new Timer();
 
-function proccessUploadedFile(
+function processUploadedFile(
   buffer,
   target_columns,
   target_folders,
@@ -49,6 +51,13 @@ function proccessUploadedFile(
 }
 
 function findFiles() {
+  var searchCompletion = document.getElementById("search-completed");
+  if (searchCompletion) searchCompletion.innerHTML = "";
+  var foundFilesDiv = document.getElementById("found-files-table-body");
+  if (foundFilesDiv) foundFilesDiv.innerHTML = "";
+  var searchKeyDisplay = document.getElementById("search_key");
+  if (searchKeyDisplay) searchKeyDisplay.innerHTML = "";
+
   let target_file = document.getElementById("target-file").value.trim();
   let target_file_upload =
     document.getElementById("target-file-upload").files[0];
@@ -56,6 +65,7 @@ function findFiles() {
   let target_columns = document.getElementById("target-columns").value.trim();
   let target_folders = document.getElementById("target-folders").value.trim();
   let filesPerPage = document.getElementById("files-per-page").value;
+  console.log(target_file, target_columns, target_folders, target_file_upload);
   timer.startTimer();
   timer.displayTimer();
   document.getElementById("file-count").innerHTML = "";
@@ -63,7 +73,7 @@ function findFiles() {
   if (target_file_upload) {
     let reader = new FileReader();
     reader.onload = function (e) {
-      proccessUploadedFile(
+      processUploadedFile(
         e.target.result,
         target_columns,
         target_folders,
@@ -89,13 +99,22 @@ function displayFiles(response) {
   const data = JSON.parse(response);
   document.getElementById("loading").style.display = "none";
   if (data.error) {
-    document.getElementById("loading").innerHTML = "An error has occured";
     var resultContainer = document.getElementById("error-container");
     var foundFilesDiv = document.getElementById("found-files-table-body");
+    var searchCompletion = document.getElementById("search-completed");
+    searchCompletion.innerHTML =
+      "<p class='mb-1 font-normal text-red-700'>Search returned with an error</p>";
     foundFilesDiv.innerHTML = "";
+    if (data.error == "No file was found") {
+      searchCompletion.innerHTML =
+        "<p class='mb-1 font-normal text-green-700'>Search Completed -- No file found</p>";
+    }
     resultContainer.innerHTML = `<div><p class="text-red-500 text-lg">${data.error}</p></div>`;
     return;
   }
+  var searchCompletion = document.getElementById("search-completed");
+  searchCompletion.innerHTML =
+    "<p class='mb-1 font-normal text-green-700'>Search Completed</p>";
 
   var foundFilesDiv = document.getElementById("found-files-table-body");
   foundFilesDiv.innerHTML = "";
@@ -105,6 +124,7 @@ function displayFiles(response) {
   const page = data.page;
   const total_page = data.total_page;
   const files = data.files;
+  const files_length = data.files_length;
   const search_key = data.search_key;
   const has_more = data.has_more;
 
@@ -116,8 +136,8 @@ function displayFiles(response) {
   <h6 class="text-md flex gap-6">
   <span class="text-gray-900">Page${page + 1}/${total_page} </span>
   </h6>
-  <h6 class="font-bold text-md">${search_key.toUpperCase()}</h6>
-  <button class="block focus:outline-none text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 transition-all" onclick='handleDeleteAll("${filenames}", "${search_key}");' >Delete all</button>
+  <h6 class="font-bold text-md">${files_length} files found for ${search_key.toUpperCase()}</h6>
+  <button class="block focus:outline-none text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-sm text-sm px-5 py-2.5 me-2 mb-2 transition-all" onclick='handleDeleteAll("${filenames}", "${search_key}");' >Delete all</button>
   `;
 
   files.map((file, index) => {
@@ -127,13 +147,13 @@ function displayFiles(response) {
   if (has_more) {
     document.getElementById(
       "show-more"
-    ).innerHTML = `<button class="my-5 py-2.5 px-5 rounded-lg text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg" onclick='handleShowMore("${page}");'>Show more</button>`;
+    ).innerHTML = `<button class="my-5 py-2.5 px-5 rounded-sm text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-sm" onclick='handleShowMore("${page}");'>Show more</button>`;
   }
 
-  let nexpPage = document.getElementById("next-button-top");
-  nexpPage.style.display = "flex";
-  nexpPage = document.getElementById("next-button-bottom");
-  nexpPage.style.display = "flex";
+  let nextPage = document.getElementById("next-button-top");
+  nextPage.style.display = "flex";
+  nextPage = document.getElementById("next-button-bottom");
+  nextPage.style.display = "flex";
 }
 
 function fileTemplate(filepath, search_key, index) {
@@ -148,8 +168,8 @@ function fileTemplate(filepath, search_key, index) {
                 </td>
                 <td class="px-6 py-4">
                     <div class="flex justify-center items-end">
-                        <button class="py-2.5 px-5 me-2 mb-2 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100 transition-all" onclick="handleKeepFile('${filename}', '${search_key}')">Keep</button>
-                        <button class="text-white bg-gray-800 hover:bg-gray-900 focus:outline-none focus:ring-4 focus:ring-gray-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 transition-all" onclick="handleDeleteFile('${filename}', '${search_key}'); ">Delete</button>
+                        <button class="py-2.5 px-5 me-2 mb-2 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-sm border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100 transition-all" onclick="handleKeepFile('${filename}', '${search_key}')">Keep</button>
+                        <button class="text-white bg-gray-800 hover:bg-gray-900 focus:outline-none focus:ring-4 focus:ring-gray-300 font-medium rounded-sm text-sm px-5 py-2.5 me-2 mb-2 transition-all" onclick="handleDeleteFile('${filename}', '${search_key}'); ">Delete</button>
                     </div>
                 </td>
             </tr>`;
@@ -213,7 +233,7 @@ function show_deleted_banner(filepath) {
                     </p>
                 </div>
                 <div class="flex items-center ">
-                    <button data-dismiss-target="#sticky-banner" type="button" class="flex-shrink-0 inline-flex justify-center w-7 h-7 items-center  hover:bg-red-400 hover:text-gray-900 rounded-md text-sm p-1.5 transition-all" onclick='deleteBanner()' >
+                    <button data-dismiss-target="#sticky-banner" type="button" class="flex-shrink-0 inline-flex justify-center w-7 h-7 items-center  hover:bg-red-400 hover:text-gray-900 rounded-sm text-sm p-1.5 transition-all" onclick='deleteBanner()' >
                         <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
                             <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
                         </svg>
