@@ -18,6 +18,7 @@ function show_update_banner(version) {
             </div>
             `;
 }
+
 class Timer {
   constructor() {
     this.start = Date.now();
