@@ -8,7 +8,7 @@ from ChannelManager import *
 from FileManager import *
 
 
-VERSION = "1.0.1 Viper"
+VERSION = "1.0.2 Viper"
 VERSION_URL = (
     "https://github.com/raheem-tiamiyu/NetworkTool/raw/refs/heads/main/version.txt"
 )
