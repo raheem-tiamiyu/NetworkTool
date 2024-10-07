@@ -1,48 +1,54 @@
 import os
 import sys
 import eel
-import multiprocessing
-
 import requests
+import multiprocessing
+from pathlib import Path
 from ChannelManager import *
 from FileManager import *
-import os
 
 
-VERSION = "1.0.0"
-VERSION_URL = f"https://raw.githubusercontent.com/Tosvng/GGNDTVersioning/refs/heads/main/version.txt"
+VERSION = "1.0.1 Viper"
+VERSION_URL = (
+    "https://github.com/raheem-tiamiyu/NetworkTool/raw/refs/heads/main/version.txt"
+)
 # VERSION_URL = f"https://encana-my.sharepoint.com/:t:/r/personal/raheem_tiamiyu_encana_com/Documents/Documents/G%26G/seismic_finder/G%26GNDTversion.txt.txt?csf=1&web=1&e=Bje68N"
 
-DOWNLOAD_URL = ""
+DOWNLOAD_URL = "https://github.com/raheem-tiamiyu/NetworkTool/raw/refs/heads/main/dist/G&G%20Network%20Deletion%20Tool.exe"
 
 
 @eel.expose
 def check_for_version_update():
     try:
-        # print()
-        # response = requests.get(VERSION_URL, verify=False)
-        # print(response.text.strip() == VERSION)
+        response = requests.get(VERSION_URL, verify=False)
+        latest_version = response.text.strip()
+        if latest_version != VERSION:
+            print(latest_version == VERSION)
+            latest_version = download_new_version()
+            return latest_version
 
-        # Get the absolute path of the current file
-        download_new_version()
-        current_file_path = os.path.abspath(__file__)
-
-        print(f"The current file path is: {current_file_path}")
     except Exception as e:
         print(e)
 
 
 def download_new_version():
-    # response = requests.get(DOWNLOAD_URL, stream=True, verify=False)
-    # with open(os.path.abspath(__file__), 'wb') as file:
-    #     for chunk in response.iter_content(chunk_size=8192):
-    #         file.write(chunk)
     # return "Download complete!"
     try:
-        with open(f"dist\G&G Network Deletion Tool.exe", "rb") as source_file:
-            with open("filename.exe", "wb") as target_file:
-                for chunk in source_file:
-                    target_file.write(chunk)
+        response = requests.get(DOWNLOAD_URL, stream=True, verify=False)
+        print("download", response)
+        with open(
+            os.path.join(
+                os.path.dirname(Path(__file__).parent.absolute()),
+                "G&G Network Deletion Tool.exe",
+            ),
+            "wb",
+        ) as file:
+            for chunk in response.iter_content(chunk_size=8192):
+                file.write(chunk)
+        # with open(f"dist\G&G Network Deletion Tool.exe", "rb") as source_file:
+        #     with open("filename.exe", "wb") as target_file:
+        #         for chunk in source_file:
+        #             target_file.write(chunk)
         return "Update complete!"
     except Exception as e:
         return f"Update failed: {e}"
