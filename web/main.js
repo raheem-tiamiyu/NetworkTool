@@ -1,5 +1,8 @@
 eel.check_for_version_update()(show_update_banner);
 function show_update_banner(version) {
+  if (!version) {
+    return;
+  }
   document.getElementById("deleted-sticky-banner-container").innerHTML = `
   <div id="sticky-banner"  tabindex="-1" class="fixed top-0 start-0 z-50 flex justify-between w-full p-4 border-b border-green-500 bg-green-200">
                 <div class="flex items-center mx-auto">
@@ -17,6 +20,16 @@ function show_update_banner(version) {
                 </div>
             </div>
             `;
+
+  function deleteBanner() {
+    const banner = document.getElementById("sticky-banner");
+    if (banner) {
+      banner.remove();
+    }
+  }
+  setTimeout(() => {
+    deleteBanner();
+  }, 3000);
 }
 
 class Timer {

@@ -25,12 +25,9 @@ def check_for_version_update():
         latest_version = response.text.strip()
         if latest_version != VERSION:
             print(latest_version == VERSION)
-            # for file in os.listdir():
-            #     if file == os.path.basename(sys.argv[0]):
-            #         print(os.path.basename(sys.argv[0]))
-
             download_new_version(latest_version)
             return latest_version
+        return None
 
     except Exception as e:
         print(e)
@@ -43,11 +40,15 @@ def download_new_version(latest_version):
         response = requests.get(DOWNLOAD_URL, verify=False)
         with open(exename, "wb") as file:
             file.write(response.content)
-        atexit.register(os.remove(sys.argv[0]))
+        atexit.register(delete_current_version)
         print("done")
         return "Update complete!"
     except Exception as e:
         return f"Update failed: {e}"
+
+
+def delete_current_version():
+    os.remove(sys.argv[0])
 
 
 def resource_path(relative_path):
