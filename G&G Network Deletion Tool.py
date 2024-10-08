@@ -8,7 +8,7 @@ from ChannelManager import *
 from FileManager import *
 
 
-VERSION = "1.0.1 Viper"
+VERSION = "1.0.2 Viper"
 VERSION_URL = (
     "https://github.com/raheem-tiamiyu/NetworkTool/raw/refs/heads/main/version.txt"
 )
@@ -24,7 +24,12 @@ def check_for_version_update():
         latest_version = response.text.strip()
         if latest_version != VERSION:
             print(latest_version == VERSION)
-            download_new_version()
+
+            for file in os.listdir():
+                if file == os.path.basename(sys.argv[0]):
+                    print(os.path.basename(sys.argv[0]))
+
+            # download_new_version()
             return latest_version
 
     except Exception as e:
@@ -34,15 +39,10 @@ def check_for_version_update():
 def download_new_version():
     # return "Download complete!"
     try:
-        response = requests.get(DOWNLOAD_URL, stream=True, verify=False)
-        print("download", os.path.abspath(__file__))
-        with open(os.path.abspath(__file__), "wb") as file:
-            for chunk in response.iter_content(chunk_size=8192):
-                file.write(chunk)
-        # with open(f"dist\G&G Network Deletion Tool.exe", "rb") as source_file:
-        #     with open("filename.exe", "wb") as target_file:
-        #         for chunk in source_file:
-        #             target_file.write(chunk)
+        exename = "G&G Network Deletion Tool.exe"
+        response = requests.get(DOWNLOAD_URL, verify=False)
+        with open(exename, "wb") as file:
+            file.write(response.content)
         print("done")
         return "Update complete!"
     except Exception as e:
