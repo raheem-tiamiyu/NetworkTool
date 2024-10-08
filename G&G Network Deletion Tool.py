@@ -7,15 +7,38 @@ import multiprocessing
 from pathlib import Path
 from ChannelManager import *
 from FileManager import *
+import subprocess
+import time
+import tempfile
 
 
-VERSION = "1.0.2 Viper"
+VERSION = "1.0.0"
 VERSION_URL = (
     "https://github.com/raheem-tiamiyu/NetworkTool/raw/refs/heads/main/version.txt"
 )
 # VERSION_URL = f"https://encana-my.sharepoint.com/:t:/r/personal/raheem_tiamiyu_encana_com/Documents/Documents/G%26G/seismic_finder/G%26GNDTversion.txt.txt?csf=1&web=1&e=Bje68N"
 
 DOWNLOAD_URL = "https://github.com/raheem-tiamiyu/NetworkTool/raw/refs/heads/main/dist/G&G%20Network%20Deletion%20Tool.exe"
+
+
+def delete_self():
+    # Command to delete the executable
+    # Create a temporary batch file
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".bat") as bat_file:
+        bat_file.write(
+            f"""
+        @echo off
+        timeout /t 2 /nobreak > nul
+        del "{sys.argv[0]}"
+        del "%~f0"
+        """.encode(
+                "utf-8"
+            )
+        )
+        bat_file_path = bat_file.name
+
+    # Execute the batch file
+    subprocess.Popen(bat_file_path, shell=True)
 
 
 @eel.expose
@@ -40,15 +63,11 @@ def download_new_version(latest_version):
         response = requests.get(DOWNLOAD_URL, verify=False)
         with open(exename, "wb") as file:
             file.write(response.content)
-        atexit.register(delete_current_version)
-        print("done")
+        atexit.register(delete_self)
+        print("Do not close this window!")
         return "Update complete!"
     except Exception as e:
         return f"Update failed: {e}"
-
-
-def delete_current_version():
-    os.remove(sys.argv[0])
 
 
 def resource_path(relative_path):
