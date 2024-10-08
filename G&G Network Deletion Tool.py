@@ -1,6 +1,7 @@
 import os
 import sys
 import eel
+import atexit
 import requests
 import multiprocessing
 from pathlib import Path
@@ -24,25 +25,25 @@ def check_for_version_update():
         latest_version = response.text.strip()
         if latest_version != VERSION:
             print(latest_version == VERSION)
+            # for file in os.listdir():
+            #     if file == os.path.basename(sys.argv[0]):
+            #         print(os.path.basename(sys.argv[0]))
 
-            for file in os.listdir():
-                if file == os.path.basename(sys.argv[0]):
-                    print(os.path.basename(sys.argv[0]))
-
-            # download_new_version()
+            download_new_version(latest_version)
             return latest_version
 
     except Exception as e:
         print(e)
 
 
-def download_new_version():
+def download_new_version(latest_version):
     # return "Download complete!"
     try:
-        exename = "G&G Network Deletion Tool.exe"
+        exename = f"G&G Network Deletion Tool_v{latest_version}.exe"
         response = requests.get(DOWNLOAD_URL, verify=False)
         with open(exename, "wb") as file:
             file.write(response.content)
+        atexit.register(os.remove(sys.argv[0]))
         print("done")
         return "Update complete!"
     except Exception as e:
