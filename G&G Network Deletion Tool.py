@@ -12,11 +12,10 @@ import time
 import tempfile
 
 
-VERSION = "1.0.0"
+VERSION = "1.0.2"
 VERSION_URL = (
     "https://github.com/raheem-tiamiyu/NetworkTool/raw/refs/heads/main/version.txt"
 )
-# VERSION_URL = f"https://encana-my.sharepoint.com/:t:/r/personal/raheem_tiamiyu_encana_com/Documents/Documents/G%26G/seismic_finder/G%26GNDTversion.txt.txt?csf=1&web=1&e=Bje68N"
 
 DOWNLOAD_URL = "https://github.com/raheem-tiamiyu/NetworkTool/raw/refs/heads/main/dist/G&G%20Network%20Deletion%20Tool.exe"
 
@@ -43,6 +42,7 @@ def delete_self():
 
 @eel.expose
 def check_for_version_update():
+    print(sys.argv[0])
     try:
         response = requests.get(VERSION_URL, verify=False)
         latest_version = response.text.strip()
@@ -81,7 +81,6 @@ if __name__ == "__main__":
     multiprocessing.set_start_method("spawn")
     web_folder = resource_path("web")
     eel.init("web")
-    # search_tool = SearchTool(eel)
     file_manager = FileManager()
     comms_channel = ChannelManager()
     file_manager.set_comms_channel(comms_channel)

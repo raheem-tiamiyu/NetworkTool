@@ -25,7 +25,7 @@ exe = EXE(
     name='G&G Network Deletion Tool',
     debug=False,
     bootloader_ignore_signals=False,
-    strip=True,
+    strip=False,
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
@@ -35,5 +35,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['C:\\Users\\rtiamiyu\\OneDrive - Ovintiv\\Documents\\G&G\\seismic_finder\\web\\icon.ico'],
+    icon=['C:\\Users\\rtiamiyu\\OneDrive - Ovintiv\\Documents\\GG\\seismic_finder\\web\\icon.ico'],
 )
