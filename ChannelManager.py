@@ -7,20 +7,29 @@ class ChannelManager:
     global file_manager
     file_manager = FileManager()
 
-    def __init__(self) -> None:
+    def __init__(self, pub_socket=None) -> None:
         self.error_handler = ErrorHandler()
+        self.pub_socket = pub_socket
 
-    def call(self):
-        eel.updateCount(25)
+    def test_send(self) -> dict:
+        """Test sending on a channel"""
+        return {"message": "Hello from py"}
+
+    def test_receive(self, text) -> None:
+        """Test receiving on a channel"""
+        print("received: ", text)
+        return "Hello from py"
 
     def send_count_update(self, file_count):
+        print(file_count)
         eel.updateCount(file_count)
 
-    def progress_update(self, directory, file):
+    def progress_update(self, folder, file):
         try:
-            eel.progressUpdate(directory, file)
+            print(folder)
+            eel.progressUpdate(folder, file)
         except Exception as e:
-            # print(e)
+            print(e)
             pass
 
     @eel.expose

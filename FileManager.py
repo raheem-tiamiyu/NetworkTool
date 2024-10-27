@@ -94,6 +94,12 @@ class FileManager:
                             :index
                         ]
                 os.remove(file_path)
+                # remove keys that have been completely deleted
+                if (
+                    not len(self.found_files[search_key])
+                    and search_key in self.found_files
+                ):
+                    del self.found_files[search_key]
                 self.comms_channel.send_count_update(len(self.files))
                 return True
         except Exception as e:

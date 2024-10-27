@@ -2,6 +2,7 @@ import base64
 from io import BytesIO
 import multiprocessing
 import os
+import time
 
 import pandas as pd
 from ErrorHandler import *
@@ -16,7 +17,6 @@ class SearchHandler:
 
     def do_multiprocess_search(self, search_keys, specified_columns, target_folders):
         queue = multiprocessing.Queue()
-
         try:
             # PREP: get the search keys, clean user input
             folder_processes = []
@@ -160,7 +160,7 @@ class SearchHandler:
                         queue.put(
                             {
                                 "report": {
-                                    "folder": f"{target_folder}",
+                                    "folder": f"{dirpath}",
                                     "file": f"{filename}",
                                 }
                             }
