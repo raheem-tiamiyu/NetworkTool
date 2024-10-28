@@ -21,6 +21,13 @@
   },
   "peacock.color": "#1857a4",
   "cSpell.words": [
-    "comms"
+    "comms",
+    "ecnshare",
+    "exename",
+    "getpid",
+    "Lockdown",
+    "MEIPASS",
+    "multiprocess",
+    "zerorpc"
   ]
 }
