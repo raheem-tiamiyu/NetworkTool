@@ -1,18 +1,14 @@
 import os
-from re import sub
 import sys
-import atexit
 import multiprocessing
 import subprocess
 import tempfile
-import urllib3
 import eel
 import requests
 import zerorpc
 from ChannelManager import *
 from FileManager import *
 import subprocess
-import time
 import tempfile
 
 
@@ -111,13 +107,5 @@ if __name__ == "__main__":
     web_folder = resource_path("web2")
     eel.init("web2/dist")
     file_manager = FileManager()
-    comms_channel = ChannelManager(pub_socket)
+    comms_channel = ChannelManager()
     file_manager.set_comms_channel(comms_channel)
-
-    addr = "tcp://0.0.0.0:4242"
-    s = zerorpc.Server(comms_channel)
-    s.bind(addr)
-    print("Listening on 4242")
-    s.run()
-
-    pub_socket.send_string("hi")
