@@ -7,9 +7,8 @@ class ChannelManager:
     global file_manager
     file_manager = FileManager()
 
-    def __init__(self, pub_socket=None) -> None:
+    def __init__(self) -> None:
         self.error_handler = ErrorHandler()
-        self.pub_socket = pub_socket
 
     def test_send(self) -> dict:
         """Test sending on a channel"""

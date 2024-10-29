@@ -5,7 +5,7 @@ a = Analysis(
     ['G&G Network Deletion Tool.py'],
     pathex=[],
     binaries=[],
-    datas=[('C:\\Users\\rtiamiyu\\AppData\\Local\\miniforge3\\envs\\sf\\Lib\\site-packages\\eel\\eel.js', 'eel'), ('web', 'web')],
+    datas=[('C:\\Users\\rtiamiyu\\AppData\\Local\\miniforge3\\envs\\sf\\Lib\\site-packages\\eel\\eel.js', 'eel'), ('web2\\dist', 'web2\\dist')],
     hiddenimports=['bottle_websocket'],
     hookspath=[],
     hooksconfig={},
