@@ -156,5 +156,5 @@ settings.json
 # vscode
 .vscode/
 
-mapped_fs.parquet
-mapped_fscsv.csv
+*.parquet
+*.csv
