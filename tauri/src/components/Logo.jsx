@@ -1,6 +1,5 @@
 import { motion } from "framer-motion";
 import OVVLOGO from "../assets/Ovintivlogo.png";
-import { Box, Typography } from "@mui/material";
 
 const Logo = () => {
   return (
@@ -9,12 +8,12 @@ const Logo = () => {
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.5 }}
     >
-      <Box display={"flex"} flexDirection={"row"} justifyContent={"center"}>
-        <img src={OVVLOGO} alt="ovintiv logo" height={"80px"} />
-      </Box>
-      <Typography variant="subtitle2" textAlign={"center"} marginBottom={8}>
+      <div className="flex flex-row justify-center">
+        <img src={OVVLOGO} alt="ovintiv logo" className="h-[80px]" />
+      </div>
+      <p className="text-center text-sm">
         Search and delete files on your network
-      </Typography>
+      </p>
     </motion.div>
   );
 };

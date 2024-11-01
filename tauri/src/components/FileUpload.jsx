@@ -1,9 +1,5 @@
 /* eslint-disable react/prop-types */
-import { Box } from "@mui/material";
 import React from "react";
-import styled from "styled-components";
-
-const StyledFile = styled.input``;
 
 const FileUpload = ({ label, name, changeFunction }) => {
   const processUploadedFile = (buffer) => {
@@ -26,7 +22,7 @@ const FileUpload = ({ label, name, changeFunction }) => {
   };
 
   return (
-    <Box mt={1}>
+    <div className="mt-2">
       <label
         className="block text-sm font-semibold text-gray-900"
         htmlFor={name}
@@ -47,7 +43,7 @@ const FileUpload = ({ label, name, changeFunction }) => {
         name={name}
         onChange={handleChange}
       />
-    </Box>
+    </div>
   );
 };
 
