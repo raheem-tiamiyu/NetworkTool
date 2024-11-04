@@ -3,9 +3,10 @@ import sys
 import multiprocessing
 import subprocess
 import tempfile
+from time import sleep
 import eel
 import requests
-import zerorpc
+import argparse
 from ChannelManager import *
 from FileManager import *
 import subprocess
@@ -104,8 +105,24 @@ def resource_path(relative_path):
 if __name__ == "__main__":
     multiprocessing.freeze_support()
     multiprocessing.set_start_method("spawn")
-    web_folder = resource_path("web2")
-    eel.init("web2/dist")
+
+    parser = argparse.ArgumentParser(description="search, map or delete files")
+    subparsers = parser.add_subparsers(dest="command", help="Desired action to perform")
+
+    scan_parser = subparsers.add_parser("search", help="search for files")
+    scan_parser.add_argument("-k", "--keys", required=True, help="Search keys")
+    scan_parser.add_argument("-c", "--columns", required=False, help="Target columns")
+    scan_parser.add_argument("-p", "--path", required=False, help="Path to search in")
+
+    scan_parser = subparsers.add_parser("delete", help="delete files")
+    scan_parser.add_argument("-p", "--path", help="path to files")
+
     file_manager = FileManager()
     comms_channel = ChannelManager()
     file_manager.set_comms_channel(comms_channel)
+
+    args = parser.parse_args()
+    if args.command == "search":
+        comms_channel.search(args.keys, args.columns, args.path)
+
+    print("done")

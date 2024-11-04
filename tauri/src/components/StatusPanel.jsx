@@ -1,5 +1,6 @@
 /* eslint-disable react/prop-types */
 import React, { useState } from "react";
+import { listen } from "@tauri-apps/api/event";
 import { LinearProgress } from "@mui/material";
 
 const StatusPanel = ({
@@ -8,18 +9,32 @@ const StatusPanel = ({
   setError,
   isSearching,
 }) => {
-  window.eel.expose(updateCount, "updateCount");
   function updateCount(i) {
     const countDiv = document.getElementById("file-count");
     countDiv.innerHTML = `${i}`;
   }
-  window.eel.expose(progressUpdate, "progressUpdate");
   function progressUpdate(directory, file) {
     // document.getElementById(
     //   "directory-folder-searched"
     // ).innerHTML = `${directory}`;
     document.getElementById("file-folder-searched").innerHTML = `${file}`;
   }
+
+  // Listen for the "progress_update" event
+  listen("progress_update", (event) => {
+    const payload = event.payload.split("::message")[1];
+    const jsonData = JSON.parse(payload);
+    //  update the UI with the received JSON data here
+    progressUpdate(jsonData["folder"], jsonData["file"]);
+  });
+
+  // Listen for the "count_update" event
+  listen("count_update", (event) => {
+    const payload = event.payload.split("::message")[1];
+    const jsonData = JSON.parse(payload);
+    //  update the UI with the received JSON data here
+    updateCount(jsonData["count"]);
+  });
 
   const resetSearch = () => {
     setTableContent(null);

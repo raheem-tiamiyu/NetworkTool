@@ -1,4 +1,11 @@
 import { useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
+
+import { motion } from "framer-motion";
+import { toast } from "react-toastify";
+import { RadioGroup } from "@mui/material";
+
 import InputFields from "./InputFields.jsx";
 import ResultsTable from "./ResultsTable.jsx";
 import Spinner from "./Spinner.jsx";
@@ -7,9 +14,6 @@ import Error from "./Error.jsx";
 import InputStepper from "./InputStepper.jsx";
 import FileUpload from "./FileUpload.jsx";
 import StatusPanel from "./StatusPanel.jsx";
-import { motion } from "framer-motion";
-import { toast } from "react-toastify";
-import { RadioGroup } from "@mui/material";
 
 const SearchForm = () => {
   const [filePath, setFilePath] = useState("");
@@ -17,7 +21,9 @@ const SearchForm = () => {
   const [tokens, setTokens] = useState("");
   const [targetColumns, setTargetColumns] = useState("");
 
-  const [networkPath, setNetworkPath] = useState("");
+  const [networkPath, setNetworkPath] = useState(
+    "C:\\Users\\rtiamiyu\\OneDrive - Ovintiv\\Documents\\GG\\tests"
+  );
   const [isSearching, setIsSearching] = useState(false);
   const [filesPerPage, setFilesPerPage] = useState(100);
   const [tableContent, setTableContent] = useState();
@@ -52,7 +58,16 @@ const SearchForm = () => {
     return true;
   };
 
-  const findFiles = () => {
+  // Listen for the "progress_update" event
+  listen("search_result", (event) => {
+    const payload = event.payload.split("::message")[1];
+    // const jsonData = JSON.parse(payload);
+    // console.log("search_result:", JSON.parse(payload));
+    processSearchResults(payload);
+    //  update the UI with the received JSON data here
+    // updateCount(jsonData["count"]);
+  });
+  const findFiles = async () => {
     if (!validateInput()) {
       return;
     }
@@ -64,12 +79,11 @@ const SearchForm = () => {
     setIsSearching(true);
     setTableContent(null);
     setError(null);
-    // eel.search(
-    //   tokenInput[tokenInputType],
-    //   targetColumns,
-    //   networkPath,
-    //   filesPerPage
-    // )(processSearchResults);
+    const res = await invoke("python_search_exe", {
+      keys: tokens,
+      columns: "1",
+      paths: networkPath,
+    });
     setTimeout(() => {}, 3000);
   };
 
@@ -146,7 +160,8 @@ const SearchForm = () => {
                           label="Upload File"
                           name="tokens"
                           value={upload}
-                          changeFunction={setUpload}
+                          filePath={filePath}
+                          setFilePath={setFilePath}
                         />
                         <InputFields
                           label="Column Name(s)"

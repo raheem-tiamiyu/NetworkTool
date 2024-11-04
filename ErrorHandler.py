@@ -6,4 +6,6 @@ class ErrorHandler:
         pass
 
     def show_error_message(self, message):
-        return json.dumps({"error": message})
+        error = json.dumps({"error": message})
+        print(error)
+        return error

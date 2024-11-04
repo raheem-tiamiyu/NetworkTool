@@ -1,38 +1,54 @@
 /* eslint-disable react/prop-types */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Row from "./Row";
 
 const ResultsTable = ({ data, filesPerPage, processNewPage }) => {
-  const page = data?.page;
-  const total_page = data?.total_page;
-  const files_length = data?.files_length;
-  const searchKey = data?.search_key;
-  const has_more = data?.has_more;
+  const total_files_found = data?.number_of_files_found;
+  const totalNumberOfPage = data?.total_pages;
+  // const files_length = data?.files_length;
+  const searchKeys = data?.search_keys;
   const files = data?.files;
+  console.log(files);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [currentKey, setCurrentKey] = useState(
+    currentPage >= 0 ? searchKeys[currentPage] : null
+  );
 
   const [deleteAllSignal, setDeleteAllSignal] = useState(false);
 
   const handleBackPage = () => {
     setDeleteAllSignal(false);
-    eel.get_previous_page(filesPerPage)(processNewPage);
+    setCurrentPage((currentPage) => (currentPage >= 0 ? currentPage - 1 : 0));
+
+    // eel.get_previous_page(filesPerPage)(processNewPage);
   };
   const handleNextPage = () => {
     setDeleteAllSignal(false);
-    eel.get_next_page(filesPerPage)(processNewPage);
+    setCurrentPage((currentPage) => (currentPage >= 0 ? currentPage + 1 : 0));
+    // eel.get_next_page(filesPerPage)(processNewPage);
   };
   const handleShowMore = () => {
     setDeleteAllSignal(false);
-    eel.show_more_files(page, filesPerPage)(processNewPage);
+    // eel.show_more_files(currentPage, filesPerPage)(processNewPage);
+  };
+
+  const removeFileFromList = ({ filepath, searchKey }) => {
+    const index = files[searchKey].indexOf(filepath);
+    files[searchKey].splice(index, 1);
   };
 
   const handleDeleteAll = () => {
     var userConfirmed = confirm(
-      `Are you sure you want to delete all files for ${searchKey}?`
+      `Are you sure you want to delete all files for ${searchKeys[currentPage]}?`
     );
     if (userConfirmed) {
       setDeleteAllSignal(true);
     }
   };
+
+  useEffect(() => {
+    setCurrentKey(searchKeys[currentPage]);
+  }, [currentPage]);
 
   return (
     <div>
@@ -49,7 +65,7 @@ const ResultsTable = ({ data, filesPerPage, processNewPage }) => {
               type="button"
               role="back"
               className="py-2 px-2 text-sm font-medium text-gray-900 focus:outline-none bg-gray-50 rounded-sm border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 disabled:bg-gray-200 disabled:cursor-not-allowed focus:ring-gray-100 transition-all"
-              disabled={page <= 0}
+              disabled={currentPage <= 0}
               onClick={handleBackPage}
             >
               <svg
@@ -68,14 +84,14 @@ const ResultsTable = ({ data, filesPerPage, processNewPage }) => {
             </button>
             <h6 className="text-md">
               <span className="text-gray-900">
-                {page + 1} / {total_page}
+                {currentPage + 1} / {totalNumberOfPage}
               </span>
             </h6>
             <button
               type="button"
               role="next"
               className="text-white bg-gray-800 hover:bg-gray-900 focus:outline-none focus:ring-4 focus:ring-gray-300 font-medium rounded-sm text-sm py-2 px-2 disabled:bg-gray-300 disabled:cursor-not-allowed mb-2 transition-all"
-              disabled={page >= total_page - 1}
+              disabled={currentPage >= totalNumberOfPage - 1}
               onClick={handleNextPage}
             >
               <svg
@@ -95,7 +111,8 @@ const ResultsTable = ({ data, filesPerPage, processNewPage }) => {
           </div>
 
           <h6 className="text-md">
-            {files_length} file(s) found for {searchKey?.toUpperCase()}
+            {files[currentKey].length} file(s) found for{" "}
+            {searchKeys[currentPage]?.toUpperCase()}
           </h6>
           <button
             className="block focus:outline-none text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-sm text-sm px-5 py-2.5  transition-all"
@@ -124,22 +141,25 @@ const ResultsTable = ({ data, filesPerPage, processNewPage }) => {
               </tr>
             </thead>
             <tbody id="found-files-table-body">
-              {files.map((filePath, index) => (
-                <Row
-                  key={filePath}
-                  filepath={filePath}
-                  searchKey={searchKey}
-                  index={index}
-                  deleteSignal={deleteAllSignal}
-                />
-              ))}
+              {files[currentKey]
+                .slice(0, Math.min(files, files[currentKey].length))
+                .map((filePath, index) => (
+                  <Row
+                    key={filePath}
+                    filepath={filePath}
+                    searchKey={currentKey}
+                    index={index}
+                    deleteSignal={deleteAllSignal}
+                    removeFileFromList={removeFileFromList}
+                  />
+                ))}
             </tbody>
           </table>
           <div id="error-container"></div>
         </div>
         <div className="flex justify-between items-center">
           <div id="show-more">
-            {has_more ? (
+            {files[currentKey].length > filesPerPage ? (
               <button
                 className="my-5 py-2.5 px-5 rounded-sm text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium"
                 onClick={handleShowMore}
@@ -156,7 +176,7 @@ const ResultsTable = ({ data, filesPerPage, processNewPage }) => {
           >
             <button
               className="py-2.5 px-5 me-2 mb-2 text-sm font-medium text-gray-900 focus:outline-none bg-gray-50 rounded-sm border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 disabled:bg-gray-200 disabled:cursor-not-allowed focus:ring-gray-100 transition-all"
-              disabled={page <= 0}
+              disabled={currentPage <= 0}
               onClick={handleBackPage}
             >
               Back
@@ -164,7 +184,7 @@ const ResultsTable = ({ data, filesPerPage, processNewPage }) => {
 
             <button
               className="text-white bg-gray-800 hover:bg-gray-900 focus:outline-none focus:ring-4 focus:ring-gray-300 font-medium rounded-sm text-sm px-5 py-2.5 disabled:bg-gray-300 disabled:cursor-not-allowed me-2 mb-2 transition-all"
-              disabled={page >= total_page - 1}
+              disabled={currentPage >= totalNumberOfPage - 1}
               onClick={handleNextPage}
             >
               Next Page

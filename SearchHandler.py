@@ -143,7 +143,7 @@ class SearchHandler:
                 process.join()
 
         except Exception as e:
-            print(e)
+            # print(e)
             return self.error_handler.show_error_message(
                 message=f"An error occurred while trying to search the first directory\n\n{e}"
             )
@@ -172,7 +172,7 @@ class SearchHandler:
                         )
 
         except Exception as e:
-            print(e)
+            # print(e)
             return self.error_handler.show_error_message(
                 message=f"An error occurred while trying to search the Second level directory\n\n{e}"
             )

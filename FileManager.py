@@ -33,13 +33,13 @@ class FileManager:
 
     def add_to_found_files(self, file, search_key):
         self.files.append(file)
-        self.found_files[search_key].append(file)
+        self.found_files[str(search_key)].append(file)
         self.comms_channel.send_count_update(len(self.files))
 
     def send_progress_update(self, update):
-        self.comms_channel.progress_update(update["folder"], update["file"])
+        self.comms_channel.progress_update(update)
 
-    def search(self, search_keys, specified_columns, target_folders, files_per_page):
+    def search(self, search_keys, specified_columns, target_folders):
         try:
             self.found_files = defaultdict(list)
             self.files = []
@@ -48,7 +48,6 @@ class FileManager:
             self.files_searched = 0
             self.directories_searched = 0
             self.currentPage = 0
-            files_per_page = int(files_per_page)
             search_handler = SearchHandler(self)
             search_handler.do_multiprocess_search(
                 search_keys, specified_columns, target_folders
@@ -62,18 +61,13 @@ class FileManager:
                     message="No file was found"
                 )
 
-            return json.dumps(
-                {
-                    "files": self.found_files[self.search_keys[0]][:files_per_page],
-                    "search_key": self.search_keys[0],
-                    "number_of_files_found": len(self.files),
-                    "files_length": len(self.found_files[self.search_keys[0]]),
-                    "page": 0,
-                    "total_page": len(self.search_keys),
-                    "has_more": len(self.found_files[self.search_keys[0]])
-                    > files_per_page,
-                }
-            )
+            return {
+                "files": self.found_files,
+                "search_keys": self.search_keys,
+                "number_of_files_found": len(self.files),
+                "total_pages": len(self.search_keys),
+            }
+
         except Exception as e:
             return self.error_handler.show_error_message(
                 message=f"An error occurred while the file manager was processing search results.{e}"

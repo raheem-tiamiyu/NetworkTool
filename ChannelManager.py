@@ -1,4 +1,6 @@
+from time import sleep
 import eel
+import json
 from ErrorHandler import *
 from FileManager import *
 
@@ -10,32 +12,23 @@ class ChannelManager:
     def __init__(self) -> None:
         self.error_handler = ErrorHandler()
 
-    def test_send(self) -> dict:
-        """Test sending on a channel"""
-        return {"message": "Hello from py"}
-
-    def test_receive(self, text) -> None:
-        """Test receiving on a channel"""
-        print("received: ", text)
-        return "Hello from py"
-
     def send_count_update(self, file_count):
-        print(file_count)
-        eel.updateCount(file_count)
+        print("count_update::message", json.dumps({"count": file_count}))
+        sleep(5)
+        # eel.updateCount(file_count)
 
-    def progress_update(self, folder, file):
+    def progress_update(self, update):
         try:
-            print(folder)
-            eel.progressUpdate(folder, file)
+            print("progress_update::message", json.dumps(update))
+            return update
         except Exception as e:
             print(e)
             pass
 
-    @eel.expose
-    def search(search_keys, specified_columns, target_folders, files_per_page):
-        return file_manager.search(
-            search_keys, specified_columns, target_folders, files_per_page
-        )
+    def search(self, search_keys, specified_columns, target_folders):
+        result = file_manager.search(search_keys, specified_columns, target_folders)
+        print("search_result::message", json.dumps(result))
+        return result
 
     @eel.expose
     def delete_file(file_path, search_key):

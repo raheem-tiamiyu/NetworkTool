@@ -1,16 +1,31 @@
 /* eslint-disable react/prop-types */
 import React, { useState } from "react";
 
-const Row = ({ filepath, searchKey, index, deleteSignal }) => {
+const Row = ({
+  filepath,
+  searchKey,
+  index,
+  deleteSignal,
+  removeFileFromList,
+}) => {
   const [isVisible, setIsVisible] = useState(true);
   const filename = filepath.split("\\").pop();
 
   const handleKeepFile = () => {
-    eel.keep_file(filepath, searchKey);
+    // eel.keep_file(filepath, searchKey);
     setIsVisible(false);
   };
   const handleDeleteFile = () => {
-    eel.delete_file(filepath, searchKey);
+    // eel.delete_file(filepath, searchKey);
+    setIsVisible(false);
+  };
+  const handleRemoveFile = (type) => {
+    if (type === "delete") {
+      // make call to rust
+    } else if (type === "keep") {
+      //make call to rust
+    }
+    removeFileFromList({ filepath, searchKey });
     setIsVisible(false);
   };
   return (
@@ -30,19 +45,19 @@ const Row = ({ filepath, searchKey, index, deleteSignal }) => {
           <div className="flex justify-center items-end">
             <button
               className="py-2.5 px-5 me-2 mb-2 text-sm font-medium text-gray-700 focus:outline-none bg-white rounded-sm border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100 transition-all"
-              onClick={handleKeepFile}
+              onClick={() => handleRemoveFile("keep")}
             >
               Keep
             </button>
             <button
               className="text-white bg-gray-800 hover:bg-gray-900 focus:outline-none focus:ring-4 focus:ring-gray-300 font-medium rounded-sm text-sm px-5 py-2.5 me-2 mb-2 transition-all"
-              onClick={handleDeleteFile}
+              onClick={() => handleRemoveFile("delete")}
             >
               Delete
             </button>
           </div>
         </td>
-        {deleteSignal && handleDeleteFile()}
+        {deleteSignal && handleRemoveFile("delete")}
       </tr>
     )
   );

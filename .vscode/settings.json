@@ -29,5 +29,8 @@
     "MEIPASS",
     "multiprocess",
     "zerorpc"
-  ]
+  ],
+  "rust-analyzer.linkedProjects": [
+    "C:/Users/rtiamiyu/OneDrive - Ovintiv/Documents/GG/seismic_finder/tauri/src-tauri/Cargo.toml"
+]
 }
