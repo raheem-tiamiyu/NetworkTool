@@ -23,6 +23,7 @@
   },
   "bundle": {
     "active": true,
+    "createUpdaterArtifacts": true,
     "targets": "all",
     "icon": [
       "icons/32x32.png",
@@ -31,5 +32,17 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "windows": {
+        "installMode": "passive"
+      },
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEREQ0U1MThDQzRFREJDOTQKUldTVXZPM0VqRkhPM1czWWdZMlZFVjRQV0F6a1lybm1UWHhENm5sVSs4K29WTU9kMkNJOExSamMK",
+      "endpoints": [
+        "https://gist.githubusercontent.com/raheem-tiamiyu/d317683d7bacff5fee2fd40cb7fc2cd5/raw/df3a7ccd09a0251d77393d26fedf5d9ae2236b6a/latest.json"
+      ],
+      "dangerousInsecureTransportProtocol": true
+    }
   }
 }
